@@ -37,6 +37,19 @@ HERO_PATH = os.environ.get("HERO_PATH", "site/hero.png")
 # push arbitrary large blobs into the repo.
 ALLOWED = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
 MAX_BYTES = 3 * 1024 * 1024
+LOCAL_ORIGINS = {f"http://localhost:{PORT}", f"http://127.0.0.1:{PORT}"}
+
+
+def _magic_type(data: bytes) -> str | None:
+    """Sniff the real image type from the leading bytes, so a caller can't
+    mislabel an arbitrary blob as an image via the content_type field."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -64,6 +77,21 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/api/upload-hero":
             self._json(404, {"error": "not found"})
             return
+
+        # CSRF / cross-origin hardening: this endpoint commits to a repo with a
+        # privileged token, so only accept same-origin JSON from a local host.
+        if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
+            self._json(415, {"error": "Content-Type must be application/json"})
+            return
+        origin = self.headers.get("Origin")
+        if origin is not None and origin not in LOCAL_ORIGINS:
+            self._json(403, {"error": "cross-origin request refused"})
+            return
+        host = self.headers.get("Host", "").split(":")[0]
+        if host not in ("localhost", "127.0.0.1"):
+            self._json(403, {"error": "non-local Host refused"})
+            return
+
         try:
             length = int(self.headers.get("Content-Length", "0"))
             raw = self.rfile.read(length)
@@ -78,6 +106,13 @@ class Handler(BaseHTTPRequestHandler):
             image_bytes = base64.b64decode(b64, validate=True)
             if not image_bytes:
                 self._json(400, {"error": "empty image"})
+                return
+            sniffed = _magic_type(image_bytes)
+            if sniffed != content_type:
+                self._json(
+                    415,
+                    {"error": f"declared type {content_type!r} does not match actual bytes ({sniffed!r})"},
+                )
                 return
             if len(image_bytes) > MAX_BYTES:
                 self._json(413, {"error": f"image too large ({len(image_bytes)} bytes, max {MAX_BYTES})"})
