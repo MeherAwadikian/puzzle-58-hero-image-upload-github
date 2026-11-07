@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Forge Studio</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:#0f0f14; }
+  header { padding:18px 28px; display:flex; justify-content:space-between; align-items:center;
+           border-bottom:1px solid #e5e7eb; }
+  .brand { font-weight:700; }
+  .hero { position:relative; }
+  .hero img { display:block; width:100%; height:auto; }
+  .hero .copy { position:absolute; left:6%; bottom:10%; color:#fff; max-width:60%;
+                text-shadow:0 2px 20px rgba(0,0,0,.4); }
+  .hero h1 { font-size:clamp(28px,5vw,52px); margin:0 0 10px; }
+  .hero p { font-size:clamp(15px,2vw,20px); margin:0; opacity:.95; }
+  main { max-width:900px; margin:0 auto; padding:40px 28px; }
+  footer { border-top:1px solid #e5e7eb; padding:20px 28px; color:#6b7280; font-size:14px; }
+</style>
+</head>
+<body>
+  <header><span class="brand">Forge Studio</span><span>Build. Ship. Repeat.</span></header>
+  <section class="hero">
+    <!-- This image is a file in the repo (site/hero.png). The upload form commits
+         a new version of it, so the site's hero changes by pushing to the repo. -->
+    <img src="hero.png" alt="Forge Studio hero" />
+    <div class="copy">
+      <h1>We build things that ship</h1>
+      <p>The hero image above lives in this repo and updates via a form upload.</p>
+    </div>
+  </section>
+  <main>
+    <h2>About this demo</h2>
+    <p>The hero banner is served straight from <code>site/hero.png</code> in the
+       GitHub repository. Puzzle #58 wires a form that uploads a new hero image and
+       commits it to that path, so the live site changes with no manual edit.</p>
+  </main>
+  <footer>Forge Studio &middot; hero image is a committed repo file</footer>
+</body>
+</html>

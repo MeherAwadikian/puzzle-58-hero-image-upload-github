@@ -1,0 +1,90 @@
+{
+  "name": "puzzle-58-hero-image-upload-github",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Update the site hero image",
+        "formDescription": "Upload a new hero image. It is committed straight to the GitHub repo and the live site updates.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Hero image",
+              "fieldType": "file",
+              "requiredField": true,
+              "acceptFileTypes": ".png,.jpg,.jpeg,.webp",
+              "multipleFiles": false
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1111111-1111-4111-8111-111111111111",
+      "name": "Hero Image Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [260, 300],
+      "webhookId": "puzzle58-hero-upload",
+      "notes": "File field arrives as BINARY on the item, keyed 'Hero_image' (field label, spaces -> underscores)."
+    },
+    {
+      "parameters": {
+        "authentication": "accessToken",
+        "resource": "file",
+        "operation": "edit",
+        "owner": {
+          "__rl": true,
+          "mode": "name",
+          "value": "MeherAwadikian"
+        },
+        "repository": {
+          "__rl": true,
+          "mode": "name",
+          "value": "puzzle-58-hero-image-upload-github"
+        },
+        "filePath": "site/hero.png",
+        "binaryData": true,
+        "binaryPropertyName": "Hero_image",
+        "commitMessage": "Update hero image via form upload",
+        "additionalParameters": {
+          "branch": {
+            "branch": "main"
+          }
+        }
+      },
+      "id": "b2222222-2222-4222-8222-222222222222",
+      "name": "Commit hero to GitHub",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [560, 300],
+      "credentials": {
+        "githubApi": {
+          "id": "REPLACE_WITH_GITHUB_CREDENTIAL_ID",
+          "name": "GitHub account (repo scope)"
+        }
+      },
+      "notes": "File -> Edit updates an existing path (needs the file to already exist). Use File -> Create for a brand-new path."
+    }
+  ],
+  "connections": {
+    "Hero Image Form": {
+      "main": [
+        [
+          {
+            "node": "Commit hero to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "note": "Pinned against DOCUMENTED node schemas (formTrigger 2.2, github 1.1) -- the live n8n Docker container was down this session (Docker/D:-drive flakiness, same as puzzles #29/#34/#42/#53), so these typeVersions were NOT pinned against the compiled container source the way puzzle #56 could. Credentials.githubApi.id is a placeholder; set it to a real GitHub credential (repo scope) after import. No token is embedded."
+  }
+}

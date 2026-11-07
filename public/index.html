@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Update hero image &middot; Forge Studio</title>
+<style>
+  :root { --violet:#6d5efc; --ink:#0f0f14; --muted:#6b7280; --line:#e5e7eb; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         color:var(--ink); background:#f6f7fb; display:flex; min-height:100vh;
+         align-items:center; justify-content:center; padding:24px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:16px;
+          width:100%; max-width:520px; padding:28px; box-shadow:0 10px 40px rgba(15,15,20,.06); }
+  h1 { font-size:20px; margin:0 0 4px; }
+  p.sub { color:var(--muted); margin:0 0 20px; font-size:14px; }
+  .drop { border:2px dashed var(--line); border-radius:12px; padding:28px; text-align:center;
+          cursor:pointer; transition:border-color .15s, background .15s; }
+  .drop:hover, .drop.over { border-color:var(--violet); background:#f3f1ff; }
+  .drop input { display:none; }
+  .preview { margin-top:16px; display:none; }
+  .preview img { max-width:100%; border-radius:10px; border:1px solid var(--line); }
+  button { margin-top:18px; width:100%; border:0; border-radius:10px; padding:13px;
+           background:var(--violet); color:#fff; font-weight:600; font-size:15px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .status { margin-top:16px; font-size:14px; white-space:pre-wrap; word-break:break-word; }
+  .status a { color:var(--violet); }
+  .ok { color:#047857; } .err { color:#b91c1c; }
+  code { background:#f3f4f6; padding:1px 5px; border-radius:5px; font-size:13px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Update the site hero image</h1>
+    <p class="sub">Pick a new hero image. On submit it is committed straight to
+       <code id="target">the repo</code> and the live site updates.</p>
+
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept="image/png,image/jpeg,image/webp" />
+      <span id="dropText">Click to choose an image (PNG / JPG / WebP, max 3 MB)</span>
+    </label>
+
+    <div class="preview" id="preview"><img id="previewImg" alt="preview" /></div>
+
+    <button id="submit" disabled>Commit new hero image</button>
+    <div class="status" id="status"></div>
+  </div>
+
+<script>
+const fileInput = document.getElementById('file');
+const drop = document.getElementById('drop');
+const dropText = document.getElementById('dropText');
+const preview = document.getElementById('preview');
+const previewImg = document.getElementById('previewImg');
+const submit = document.getElementById('submit');
+const status = document.getElementById('status');
+let picked = null;
+
+fetch('/config').then(r => r.json()).then(c => {
+  document.getElementById('target').textContent = `${c.owner}/${c.repo}:${c.path}`;
+}).catch(() => {});
+
+function choose(f) {
+  if (!f) return;
+  picked = f;
+  dropText.textContent = `${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+  const url = URL.createObjectURL(f);
+  previewImg.src = url;
+  preview.style.display = 'block';
+  submit.disabled = false;
+  status.textContent = '';
+}
+
+fileInput.addEventListener('change', e => choose(e.target.files[0]));
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  choose(e.dataTransfer.files[0]);
+});
+
+function readAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]); // strip data: prefix
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+submit.addEventListener('click', async () => {
+  if (!picked) return;
+  submit.disabled = true;
+  status.className = 'status';
+  status.textContent = 'Committing to GitHub...';
+  try {
+    const content_b64 = await readAsBase64(picked);
+    const res = await fetch('/api/upload-hero', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content_type: picked.type, content_b64 })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      status.className = 'status ok';
+      status.innerHTML = `Hero image ${data.action}. Commit <code>${data.commit_sha.slice(0,7)}</code>` +
+        `<br><a href="${data.commit_url}" target="_blank">view commit</a> &middot; ` +
+        `<a href="${data.html_url}" target="_blank">view file</a>`;
+    } else {
+      status.className = 'status err';
+      status.textContent = 'Error: ' + (data.error || 'unknown');
+      submit.disabled = false;
+    }
+  } catch (err) {
+    status.className = 'status err';
+    status.textContent = 'Error: ' + err.message;
+    submit.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
